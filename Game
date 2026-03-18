@@ -1,0 +1,359 @@
+unit Unit1;
+interface
+uses
+  Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
+  Dialogs, ExtCtrls, StdCtrls, Buttons, Vcl.Menus;
+type
+  TPole = array[0..10, 0..10] of Integer;
+  TForm1 = class(TForm)
+    Panel1: TPanel;
+    Image1: TImage;
+    Button1: TButton;
+    procedure FormCreate(Sender: TObject);
+    procedure Button1Click(Sender: TObject);
+    procedure FormClose(Sender: TObject; var Action: TCloseAction);
+    procedure Image1MouseDown(Sender: TObject; Button: TMouseButton;
+      Shift: TShiftState; X, Y: Integer);
+    procedure Image1MouseUp(Sender: TObject; Button: TMouseButton;
+      Shift: TShiftState; X, Y: Integer);
+  private
+    { Private declarations }
+  public
+    procedure Drawpole;
+    procedure open(i, j: Integer);
+    procedure SBT(Sender: TObject; Button: TMouseButton;
+      Shift: TShiftState; X, Y: Integer);
+    procedure proverka(i, j: Integer);
+    procedure showpole;
+    { Public declarations }
+  end;
+
+var
+  Form1: TForm1;
+  mina, dx, dy: Integer;
+  stop, pr, plus: Boolean;
+  flagi, pole, poleR: TPole;
+  SB: array[0..10, 0..10] of TSpeedButton;
+implementation
+{$R *.dfm}
+
+// Раскрывает поле при взрыве: прячет кнопки над минами и рисует красный прямоугольник
+procedure TForm1.showpole;
+var
+  x, y, k, l: Integer;
+begin
+  for k := 1 to 9 do
+    for l := 1 to 9 do
+      if (poleR[k, l] = -5) and (SB[k, l].Tag <> -5) then
+      begin
+        SB[k, l].Hide;
+        Image1.Canvas.Brush.Color := clRed;
+        x := (l - 1) * dx;
+        y := (k - 1) * dy;
+        Image1.Canvas.Rectangle(x, y, x + dx, y + dy);
+      end;
+end;
+
+//==============================================================================
+procedure TForm1.SBT(Sender: TObject; Button: TMouseButton;
+  Shift: TShiftState; X, Y: Integer);
+var
+  SB1: TSpeedButton;
+  i, j: Integer;
+begin
+  SB1 := TSpeedButton(Sender);
+  if SB1.Tag <> -5 then
+  begin
+    i := SB1.Tag div 10;
+    j := SB1.Tag mod 10;
+  end
+  else
+  begin
+    i := (SB1.Top div dy) + 1;
+    j := (SB1.Left div dx) + 1;
+  end;
+
+  if Button = mbLeft then
+  begin
+    open(i, j);
+  end
+  else
+  begin
+    if (SB1.Tag <> -5) and (flagi[i, j] = 0) then
+    begin
+      SB[i, j].Glyph.LoadFromFile('flag.bmp');
+      SB[i, j].Tag := -5;
+      flagi[i, j] := 1;
+      mina := mina + 1;
+      if (mina = 10) and (poleR[i, j] = -5) then
+        ShowMessage('Молодец! Победа!!');
+      if (mina = 10) and (pole[i, j] <> -5) then
+      begin
+        SB[i, j].Glyph.LoadFromFile('flagk.bmp');
+        showpole;
+      end;
+    end;
+  end;
+end;
+//==============================================================================
+procedure TForm1.open(i, j: Integer);
+var
+  x, y, k, l: Integer;
+begin
+  if pole[i, j] = 0 then
+  begin
+    SB[i, j].Hide;
+    pole[i, j] := -1;
+    for k := i - 1 to i + 1 do
+      for l := j - 1 to j + 1 do
+      begin
+        if pole[k, l] = 0 then
+          open(k, l)
+        else if pole[k, l] > 0 then
+        begin
+          SB[k, l].Hide;
+          x := (l - 1) * dx;
+          y := (k - 1) * dy;
+          Image1.Canvas.TextOut(x + 10, y + 10, IntToStr(poleR[k, l]));
+          pole[k, l] := -1;
+        end;
+      end;
+  end
+  else if pole[i, j] > 0 then
+  begin
+    SB[i, j].Hide;
+    x := (j - 1) * dx;
+    y := (i - 1) * dy;
+    Image1.Canvas.TextOut(x + 10, y + 10, IntToStr(poleR[i, j]));
+    pole[i, j] := -1;
+  end
+  else
+  begin
+    if (pole[i, j] = -5) and (SB[i, j].Tag <> -5) then
+    begin
+      for k := 1 to 9 do
+        for l := 1 to 9 do
+        begin
+          if SB[k, l].Tag <> -5 then
+          begin
+            x := (l - 1) * dx;
+            y := (k - 1) * dy;
+            if poleR[k, l] <> 0 then
+            begin
+              Image1.Canvas.Brush.Color := clWhite;
+            end;
+          end;
+          if (poleR[k, l] = -5) and (SB[k, l].Tag <> -5) then
+          begin
+            SB[k, l].Hide;
+            Image1.Canvas.Brush.Color := clRed;
+            x := (l - 1) * dx;
+            y := (k - 1) * dy;
+            Image1.Canvas.Rectangle(x, y, x + dx, y + dy);
+          end;
+        end;
+    end;
+  end;
+end;
+//==============================================================================
+procedure TForm1.Drawpole;
+var
+  x, y, i, j: Integer;
+begin
+  with Image1.Canvas do
+  begin
+    Pen.Color := clBlack;
+    for i := 1 to 9 do
+      for j := 1 to 9 do
+      begin
+        x := (j - 1) * dx;
+        y := (i - 1) * dy;
+        Rectangle(x, y, x + dx, y + dy);
+      end;
+  end;
+end;
+//==============================================================================
+procedure createpole;
+var
+  m, k, n, i, j: Integer;
+begin
+  for i := 0 to 10 do
+    for j := 0 to 10 do
+    begin
+      if (i = 0) or (j = 0) or (i = 10) or (j = 10) then
+      begin
+        pole[i, j] := -1;
+        flagi[i, j] := -1;
+      end
+      else
+      begin
+        pole[i, j] := 0;
+        flagi[i, j] := 0;
+      end;
+    end;
+
+  for i := 1 to 10 do
+  begin
+    repeat
+      k := Random(9) + 1;
+      n := Random(9) + 1;
+    until pole[k, n] = 0;
+    pole[k, n] := -5;
+  end;
+
+  for i := 1 to 9 do
+    for j := 1 to 9 do
+    begin
+      if pole[i, j] <> -5 then
+      begin
+        n := 0;
+        for k := i - 1 to i + 1 do
+          for m := j - 1 to j + 1 do
+            if pole[k, m] = -5 then
+              n := n + 1;
+        pole[i, j] := n;
+      end;
+    end;
+end;
+//==============================================================================
+procedure TForm1.FormCreate(Sender: TObject);
+var
+  i, j: Integer;
+begin
+  pr := False;
+  plus := False;
+  Randomize;
+  Panel1.DoubleBuffered := True;
+  Image1.Parent := Panel1;
+  dx := Image1.Width div 9;
+  dy := Image1.Height div 9;
+
+  for i := 0 to 10 do
+    for j := 0 to 10 do
+    begin
+      SB[i, j] := TSpeedButton.Create(Form1);
+      SB[i, j].Parent := Panel1;
+      SB[i, j].Top := (i - 1) * dx;
+      SB[i, j].Left := (j - 1) * dy;
+      SB[i, j].Width := dx;
+      SB[i, j].Height := dy;
+      SB[i, j].Visible := False;
+      SB[i, j].OnMouseDown := SBT;
+      SB[i, j].Cursor := crHandPoint;
+    end;
+end;
+//==============================================================================
+procedure TForm1.Button1Click(Sender: TObject);
+var
+  i, j: Integer;
+begin
+  createpole;
+  poleR := pole;
+  mina := 0;
+  Drawpole;
+  for i := 1 to 9 do
+    for j := 1 to 9 do
+    begin
+      SB[i, j].Tag := i * 10 + j;
+      SB[i, j].Visible := True;
+      SB[i, j].Glyph.LoadFromFile('pusto.bmp');
+    end;
+end;
+//==============================================================================
+procedure TForm1.FormClose(Sender: TObject; var Action: TCloseAction);
+var
+  i, j: Integer;
+begin
+  for i := 1 to 9 do
+    for j := 1 to 9 do
+      SB[i, j].Free;
+end;
+
+//==============================================================================
+procedure TForm1.proverka(i, j: Integer);
+var
+  x, y, n, k, l: Integer;
+begin
+  stop := False;
+  n := 0;
+  for k := i - 1 to i + 1 do
+    for l := j - 1 to j + 1 do
+      if SB[k, l].Tag = -5 then
+        n := n + 1;
+
+  if n < poleR[i, j] then
+  begin
+    for k := i - 1 to i + 1 do
+      for l := j - 1 to j + 1 do
+        if SB[k, l].Tag <> -5 then
+          SB[k, l].Hide;
+    pr := True;
+  end
+  else
+  begin
+    for k := i - 1 to i + 1 do
+      for l := j - 1 to j + 1 do
+      begin
+        if (SB[k, l].Tag = -5) and (poleR[k, l] <> -5) then
+        begin
+          SB[k, l].Glyph.LoadFromFile('flagk.bmp');
+          stop := True;
+        end
+        else
+          open(k, l);
+      end;
+  end;
+end;
+//==============================================================================
+procedure TForm1.Image1MouseDown(Sender: TObject; Button: TMouseButton;
+  Shift: TShiftState; X, Y: Integer);
+var
+  i, j: Integer;
+begin
+  j := (X div dx) + 1;
+  i := (Y div dy) + 1;
+  if poleR[i, j] > 0 then
+  begin
+    pr := True;
+    if Button = mbLeft then
+    begin
+      if plus then
+      begin
+        proverka(i, j);
+        plus := False;
+      end
+      else
+        plus := True;
+    end;
+    if Button = mbRight then
+    begin
+      if plus then
+      begin
+        proverka(i, j);
+        plus := False;
+      end
+      else
+        plus := True;
+    end;
+  end;
+end;
+//==============================================================================
+procedure TForm1.Image1MouseUp(Sender: TObject; Button: TMouseButton;
+  Shift: TShiftState; X, Y: Integer);
+var
+  i, j, k, l: Integer;
+begin
+  if pr then
+  begin
+    j := (X div dx) + 1;
+    i := (Y div dy) + 1;
+    for k := i - 1 to i + 1 do
+      for l := j - 1 to j + 1 do
+        if not ((k = i) and (l = j)) and ((pole[k, l] >= 0) or (pole[k, l] = -5)) then
+          SB[k, l].Show;
+    pr := False;
+  end;
+  if stop then
+    showpole;
+end;
+end.
